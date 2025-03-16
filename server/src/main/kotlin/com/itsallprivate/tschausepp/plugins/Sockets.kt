@@ -2,10 +2,17 @@ package com.itsallprivate.tschausepp.plugins
 
 import com.itsallprivate.tschausepp.models.Message
 import io.ktor.serialization.deserialize
-import io.ktor.serialization.kotlinx.*
-import io.ktor.server.application.*
-import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.routing.routing
+import io.ktor.server.websocket.WebSocketServerSession
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.converter
+import io.ktor.server.websocket.pingPeriod
+import io.ktor.server.websocket.sendSerialized
+import io.ktor.server.websocket.timeout
+import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -13,7 +20,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.util.Collections.synchronizedList
-import kotlin.io.println
 import kotlin.time.Duration.Companion.seconds
 
 fun Application.configureSockets() {
@@ -35,13 +41,14 @@ fun Application.configureSockets() {
             sendSerialized(Message(sender = "Server", content = "You are connected to WebSocket!"))
             println("Server: You are connected to WebSocket!")
 
-            val job = launch {
-                sharedFlow.collect { message ->
-                    for (session in sessions) {
-                        session.sendSerialized(message)
+            val job =
+                launch {
+                    sharedFlow.collect { message ->
+                        for (session in sessions) {
+                            session.sendSerialized(message)
+                        }
                     }
                 }
-            }
 
             runCatching {
                 incoming.consumeEach { frame ->

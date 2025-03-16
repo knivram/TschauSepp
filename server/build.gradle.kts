@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlinSerialization)
     application
+
+    alias(libs.plugins.ktlint)
 }
 
 group = "com.itsallprivate.tschausepp"

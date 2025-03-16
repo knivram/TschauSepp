@@ -9,7 +9,13 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.itsallprivate.tschausepp.models.Message
@@ -30,12 +36,13 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 @Preview
 fun App() {
-    val client = HttpClient(getKtorEngine()) {
-        install(WebSockets) {
-            contentConverter = KotlinxWebsocketSerializationConverter(Json)
-            pingIntervalMillis = 20_000
+    val client =
+        HttpClient(getKtorEngine()) {
+            install(WebSockets) {
+                contentConverter = KotlinxWebsocketSerializationConverter(Json)
+                pingIntervalMillis = 20_000
+            }
         }
-    }
     var coroutineScope = rememberCoroutineScope()
     var messages by remember { mutableStateOf<List<Message>>(listOf(Message("Marvin", "Test"))) }
     var message by remember { mutableStateOf<String>("") }
@@ -69,7 +76,7 @@ fun App() {
                             activeSocket?.sendSerialized(Message(sender = "Client", content = message))
                             message = ""
                         }
-                    }){
+                    }) {
                         Text("Send")
                     }
                 }
