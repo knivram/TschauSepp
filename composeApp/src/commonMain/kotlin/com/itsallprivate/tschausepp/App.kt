@@ -18,19 +18,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.itsallprivate.tschausepp.models.Event
 import com.itsallprivate.tschausepp.models.Message
+import com.itsallprivate.tschausepp.utlis.sendSerializedEvent
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.converter
-import io.ktor.client.plugins.websocket.sendSerialized
+import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.http.HttpMethod
-import io.ktor.serialization.deserialize
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
-import io.ktor.websocket.Frame
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -39,7 +37,7 @@ fun App() {
     val client =
         HttpClient(getKtorEngine()) {
             install(WebSockets) {
-                contentConverter = KotlinxWebsocketSerializationConverter(Json)
+                contentConverter = KotlinxWebsocketSerializationConverter(json)
                 pingIntervalMillis = 20_000
             }
         }
@@ -51,13 +49,13 @@ fun App() {
     LaunchedEffect(Unit) {
         client.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = SERVER_PORT, path = "/ws") {
             activeSocket = this
-            sendSerialized(Message(sender = "Client", content = "Hello from Compose!"))
-            for (message in incoming) {
-                if (message is Frame.Text) {
-                    val receivedMessage = converter?.deserialize<Message>(message)
-                    println("Client: Received message: $receivedMessage")
-                    receivedMessage?.let {
-                        messages = messages + it
+            val initialMessage = Message(sender = "Client", content = "Hello from Compose!")
+            sendSerializedEvent(initialMessage)
+            while (true) {
+                val receivedEvent = receiveDeserialized<Event>()
+                when (receivedEvent) {
+                    is Message -> {
+                        messages = messages + receivedEvent
                     }
                 }
             }
@@ -69,14 +67,16 @@ fun App() {
             LazyColumn(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 item {
                     TextField(message, onValueChange = { message = it }, label = { Text("Message") })
-                    Button(onClick = {
-                        if (message.isEmpty()) return@Button
-                        println(message)
-                        coroutineScope.launch {
-                            activeSocket?.sendSerialized(Message(sender = "Client", content = message))
-                            message = ""
-                        }
-                    }) {
+                    Button(
+                        onClick = {
+                            if (message.isEmpty()) return@Button
+                            coroutineScope.launch {
+                                val userMessage = Message(sender = "Client", content = message)
+                                activeSocket?.sendSerializedEvent(userMessage)
+                                message = ""
+                            }
+                        },
+                    ) {
                         Text("Send")
                     }
                 }
