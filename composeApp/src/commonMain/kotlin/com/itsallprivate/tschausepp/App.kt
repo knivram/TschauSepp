@@ -10,7 +10,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.itsallprivate.tschausepp.models.Event
 import com.itsallprivate.tschausepp.models.Message
-import com.itsallprivate.tschausepp.utlis.sendSerializedEvent
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
@@ -42,15 +40,13 @@ fun App() {
             }
         }
     var coroutineScope = rememberCoroutineScope()
-    var messages by remember { mutableStateOf<List<Message>>(listOf(Message("Marvin", "Test"))) }
-    var message by remember { mutableStateOf<String>("") }
+    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    var username by remember { mutableStateOf<String>("") }
     var activeSocket: DefaultClientWebSocketSession? = null
 
-    LaunchedEffect(Unit) {
-        client.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = SERVER_PORT, path = "/ws") {
+    suspend fun connect(username: String) {
+        client.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = SERVER_PORT, path = "/ws?username=$username") {
             activeSocket = this
-            val initialMessage = Message(sender = "Client", content = "Hello from Compose!")
-            sendSerializedEvent(initialMessage)
             while (true) {
                 val receivedEvent = receiveDeserialized<Event>()
                 when (receivedEvent) {
@@ -66,14 +62,13 @@ fun App() {
         Scaffold(Modifier.fillMaxWidth()) {
             LazyColumn(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 item {
-                    TextField(message, onValueChange = { message = it }, label = { Text("Message") })
+                    TextField(username, onValueChange = { username = it }, label = { Text("Message") })
                     Button(
                         onClick = {
-                            if (message.isEmpty()) return@Button
+                            if (username.isEmpty()) return@Button
                             coroutineScope.launch {
-                                val userMessage = Message(sender = "Client", content = message)
-                                activeSocket?.sendSerializedEvent(userMessage)
-                                message = ""
+                                connect(username)
+                                username = ""
                             }
                         },
                     ) {
