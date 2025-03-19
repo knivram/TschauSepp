@@ -21,7 +21,10 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.serialization.json)
-    implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
 
     testImplementation(libs.ktor.server.tests)
     testImplementation(libs.kotlin.test.junit)
